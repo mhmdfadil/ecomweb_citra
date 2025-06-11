@@ -251,7 +251,7 @@ Future<void> _handleLogout(BuildContext context) async {
     try {
       await Supabase.instance.client.auth.signOut();
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('user_id');
+      await prefs.remove('admin_id');
       await prefs.remove('session_expiry');
       await prefs.remove('admin_id'); // Menghapus sesi admin_id
 
