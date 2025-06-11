@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '/screens/content/chat.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:ecomweb/login.dart'; // Pastikan import halaman login
-import 'package:ecomweb/screens/content/ubah_profile_page.dart'; // Pastikan import halaman ubah profil
+import 'package:ecomweb/login.dart';
+import 'package:ecomweb/screens/content/ubah_profile_page.dart';
 
 class Navbar extends StatefulWidget {
   final VoidCallback onMenuPressed;
@@ -23,6 +23,7 @@ class _NavbarState extends State<Navbar> {
   bool _isMenuOpen = false;
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
+  bool _isLoggingOut = false;
 
   void _toggleMenu() {
     setState(() {
@@ -37,7 +38,9 @@ class _NavbarState extends State<Navbar> {
   }
 
   void _showMenu() {
-    final renderBox = context.findRenderObject() as RenderBox;
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null || !mounted) return;
+
     final size = renderBox.size;
     final offset = renderBox.localToGlobal(Offset.zero);
 
@@ -62,13 +65,6 @@ class _NavbarState extends State<Navbar> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,12 +74,14 @@ class _NavbarState extends State<Navbar> {
                           text: 'Ubah Profil',
                           onTap: () {
                             _hideMenu();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => UbahProfilePage(),
-                              ),
-                            );
+                            if (mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => UbahProfilePage(),
+                                ),
+                              );
+                            }
                           },
                         ),
                         Divider(height: 1, color: Colors.grey[200]),
@@ -92,7 +90,7 @@ class _NavbarState extends State<Navbar> {
                           text: 'Keluar',
                           onTap: () {
                             _hideMenu();
-                            _handleLogout(context);
+                            _handleLogout();
                           },
                         ),
                       ],
@@ -106,15 +104,19 @@ class _NavbarState extends State<Navbar> {
       ),
     );
 
-    Overlay.of(context).insert(_overlayEntry!);
+    if (mounted) {
+      Overlay.of(context).insert(_overlayEntry!);
+    }
   }
 
   void _hideMenu() {
     _overlayEntry?.remove();
     _overlayEntry = null;
-    setState(() {
-      _isMenuOpen = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isMenuOpen = false;
+      });
+    }
   }
 
   Widget _buildMenuItem({
@@ -143,102 +145,110 @@ class _NavbarState extends State<Navbar> {
     );
   }
 
-Future<void> _handleLogout(BuildContext context) async {
-  if (_isMenuOpen) {
-    _hideMenu();
-    await Future.delayed(Duration(milliseconds: 300));
-  }
+  Future<void> _handleLogout() async {
+    if (_isLoggingOut || !mounted) return;
+    _isLoggingOut = true;
 
-  final shouldLogout = await showDialog<bool>(
-    context: context,
-    builder: (context) {
-      return Dialog(
-        insetPadding: EdgeInsets.symmetric(horizontal: 20),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 250, // Atur lebar maksimum di sini
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.logout_rounded, size: 56, color: Color(0xFFF273F0)),
-                SizedBox(height: 16),
-                Text(
-                  "Keluar dari Akun?",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                SizedBox(height: 8),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    "Anda akan keluar dari aplikasi. Yakin ingin melanjutkan?",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                ),
-                SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+    try {
+      if (_isMenuOpen) {
+        _hideMenu();
+        await Future.delayed(Duration(milliseconds: 300));
+      }
+
+      if (!mounted) return;
+
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return Dialog(
+            insetPadding: EdgeInsets.symmetric(horizontal: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 250),
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Flexible(
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            side: BorderSide(color: Colors.grey[400]!),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text("Batal",
-                              style: TextStyle(color: Colors.grey[700])),
-                        )),
-                    ),
-                    SizedBox(width: 16),
-                    Flexible(
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: Color(0xFFF273F0),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child:
-                              Text("Keluar", style: TextStyle(color: Colors.white)),
-                        ),
+                    Icon(Icons.logout_rounded, size: 56, color: Color(0xFFF273F0)),
+                    SizedBox(height: 16),
+                    Text(
+                      "Keluar dari Akun?",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
                       ),
+                    ),
+                    SizedBox(height: 8),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        "Anda akan keluar dari aplikasi. Yakin ingin melanjutkan?",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              style: OutlinedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                side: BorderSide(color: Colors.grey[400]!),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text("Batal",
+                                  style: TextStyle(color: Colors.grey[700])),
+                            )),
+                        ),
+                        SizedBox(width: 16),
+                        Flexible(
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor: Color(0xFFF273F0),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text("Keluar", style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
-    },
-  );
 
-  if (shouldLogout == true) {
-    await _performLogout(context);
+      if (shouldLogout == true && mounted) {
+        await _performLogout();
+      }
+    } finally {
+      _isLoggingOut = false;
+    }
   }
-}
 
-  Future<void> _performLogout(BuildContext context) async {
+  Future<void> _performLogout() async {
+    if (!mounted) return;
+
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
@@ -253,17 +263,20 @@ Future<void> _handleLogout(BuildContext context) async {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('admin_id');
       await prefs.remove('session_expiry');
-      await prefs.remove('admin_id'); // Menghapus sesi admin_id
 
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => LoginPage()),
-        (route) => false,
-      );
+      if (mounted) {
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => LoginPage()),
+          (route) => false,
+        );
+      }
     } catch (e) {
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Gagal logout: ${e.toString()}')),
-      );
+      if (mounted) {
+        navigator.pop();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('Gagal logout: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -311,10 +324,12 @@ Future<void> _handleLogout(BuildContext context) async {
                 IconButton(
                   icon: Icon(Icons.chat_bubble, color: Colors.black, size: 28),
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => ChatPage()),
-                    );
+                    if (mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ChatPage()),
+                      );
+                    }
                   },
                 ),
               ],
