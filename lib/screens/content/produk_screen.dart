@@ -146,9 +146,7 @@ class _ProdukContentState extends State<ProdukContent> {
     final priceOriController = TextEditingController(
       text: produk?['price_ori'] != null ? _formatNumber(produk!['price_ori']) : ''
     );
-    final stockController = TextEditingController(
-      text: produk?['stock'] != null ? _formatNumber(produk!['stock']) : ''
-    );
+  
     final diskonController = TextEditingController(
       text: produk?['diskon']?.toString() ?? '0'
     );
@@ -762,7 +760,6 @@ class _ProdukContentState extends State<ProdukContent> {
                                     'name': nameController.text,
                                     'desc': descController.text,
                                     'price_ori': int.parse(priceOriController.text.replaceAll('.', '')),
-                                    'stock': int.parse(stockController.text.replaceAll('.', '')),
                                     'diskon': double.parse(diskonController.text),
                                     'price_display': int.parse(priceDisplayController.text.replaceAll('.', '')),
                                     'weight': int.parse(weightController.text),
